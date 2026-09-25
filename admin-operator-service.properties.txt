@@ -1,0 +1,56 @@
+spring.application.name=admin-operator-service
+server.port=${SERVER_PORT:8088}
+spring.config.import=optional:configserver:http://localhost:8888
+eureka.client.enabled=true
+eureka.client.service-url.defaultZone=${EUREKA_URL:http://localhost:8761/eureka/}
+eureka.client.register-with-eureka=true
+eureka.client.fetch-registry=true
+
+eureka.instance.prefer-ip-address=true
+eureka.instance.instance-id=${spring.application.name}:${server.port}
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/admin_operator_core?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true}
+
+spring.datasource.username=${DB_USERNAME:admin_operator}
+spring.datasource.password=${DB_PASSWORD:AdminOperator@203}
+
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.jdbc.time_zone=UTC
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+#spring.security.oauth2.resourceserver.jwt.issuer-uri=${JWT_ISSUER_URI:http://localhost:8081}
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${USER_SERVICE_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+security.jwt.jwk-set-uri=${USER_SERVICE_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+
+security.jwt.issuer=${JWT_ISSUER:GB-user-service}
+security.jwt.audience=${JWT_AUDIENCE:greatbus-api}
+management.endpoints.web.exposure.include=health,info
+management.endpoint.health.show-details=when-authorized
+logging.level.root=INFO
+logging.level.com.enterprise.admin=INFO
+
+# --- Kafka producer (LLD s19: idempotent Kafka publication) ---
+spring.kafka.bootstrap-servers=${KAFKA_BOOTSTRAP:localhost:9092}
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.acks=all
+spring.kafka.producer.properties.enable.idempotence=true
+# do not let one unreachable broker / missing topic block the outbox poller for the 60s default
+spring.kafka.producer.properties.max.block.ms=${KAFKA_MAX_BLOCK_MS:10000}
+
+# --- Outbox relay (LLD s16: bounded exponential backoff) ---
+# values below are configurable defaults - align with LLD s16 numbers if it defines them
+outbox.poll-ms=${OUTBOX_POLL_MS:1000}
+outbox.batch-size=${OUTBOX_BATCH_SIZE:100}
+outbox.max-attempts=${OUTBOX_MAX_ATTEMPTS:10}
+outbox.backoff-base-ms=${OUTBOX_BACKOFF_BASE_MS:1000}
+outbox.backoff-max-ms=${OUTBOX_BACKOFF_MAX_MS:300000}
+outbox.send-timeout-ms=${OUTBOX_SEND_TIMEOUT_MS:10000}
+
+# The first platform super admin. Set it to the IAM user uuid that should be able to
+# add the rest through POST /api/v1/admin/staff; ignored once an active super admin exists.
+admin.bootstrap.super-admin-user-uuid=${ADMIN_BOOTSTRAP_SUPER_ADMIN_UUID:}

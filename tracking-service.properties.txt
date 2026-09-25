@@ -1,0 +1,170 @@
+spring.application.name=tracking-service
+
+spring.datasource.url=jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:tracking_core}?createDatabaseIfNotExist=true&sslMode=DISABLED&allowPublicKeyRetrieval=true&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+spring.datasource.username=${MYSQL_USER:tracking}
+spring.datasource.password=${MYSQL_PASSWORD:tracking}
+spring.datasource.hikari.maximum-pool-size=${DB_POOL_MAX:20}
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=3000
+spring.datasource.hikari.validation-timeout=2000
+spring.datasource.hikari.max-lifetime=900000
+
+spring.jpa.open-in-view=false
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.properties.hibernate.jdbc.time_zone=UTC
+spring.jpa.properties.hibernate.type.preferred_uuid_jdbc_type=CHAR
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+# Telemetry arrives in bursts after a device reconnects (LLD 16).
+spring.jpa.properties.hibernate.jdbc.batch_size=50
+
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=false
+spring.flyway.validate-on-migrate=true
+spring.flyway.locations=classpath:db/migration
+
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=${REDIS_PORT:6379}
+spring.data.redis.timeout=2s
+
+spring.kafka.bootstrap-servers=${KAFKA_BOOTSTRAP:localhost:9092}
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.acks=all
+spring.kafka.producer.properties.enable.idempotence=true
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.group-id=${KAFKA_GROUP:tracking-service}
+spring.kafka.consumer.auto-offset-reset=latest
+spring.kafka.consumer.enable-auto-commit=false
+spring.kafka.listener.ack-mode=record
+
+spring.jackson.default-property-inclusion=non_null
+spring.jackson.serialization.write-dates-as-timestamps=false
+
+spring.security.oauth2.resourceserver.jwt.issuer-uri=${JWT_ISSUER:GB-user-service}
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${JWT_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+spring.security.oauth2.resourceserver.jwt.audiences=${JWT_AUDIENCE:greatbus-api}
+
+# LLD 3: virtual threads for the I/O-bound streaming fan-out.
+spring.threads.virtual.enabled=true
+
+server.port=${SERVER_PORT:8089}
+server.error.include-message=never
+server.error.include-stacktrace=never
+server.error.include-binding-errors=never
+server.error.whitelabel.enabled=false
+server.shutdown=graceful
+
+management.endpoints.web.exposure.include=health,info,prometheus
+management.endpoint.health.probes.enabled=true
+management.endpoint.health.show-details=never
+# LLD 16: Redis is an accelerator, not a hard dependency.
+management.health.redis.enabled=false
+management.metrics.tags.application=tracking-service
+management.tracing.sampling.probability=${TRACE_SAMPLE_RATE:0.1}
+
+logging.level.root=INFO
+logging.level.com.enterprise.tracking=${LOG_LEVEL:INFO}
+
+# LLD 5.1 device connectivity state machine
+tracking.connectivity.stale-after=PT90S
+tracking.connectivity.offline-after=PT10M
+tracking.connectivity.sweep-interval-ms=${CONNECTIVITY_SWEEP_MS:15000}
+# LLD 8: last-known position is cleared after a grace period on OFFLINE.
+tracking.connectivity.offline-cache-grace=PT5M
+
+# LLD 7.2 ingestion processing rules
+tracking.ingestion.accuracy-threshold-meters=100
+tracking.ingestion.dedupe-ttl=PT120S
+tracking.ingestion.dedupe-coordinate-tolerance-meters=5
+# LLD 16: a device timestamp further from the gateway receipt time than this is
+# implausible, so the receipt timestamp becomes the ordering signal.
+tracking.ingestion.max-clock-skew=PT2M
+
+# LLD 10 ETA computation
+tracking.eta.rolling-sample-count=12
+tracking.eta.min-speed-kmh=5
+tracking.eta.max-speed-kmh=120
+tracking.eta.cache-ttl=PT20S
+tracking.eta.default-dwell-minutes=2
+# LLD 10 step 4 asks for a floor based on "the scheduled minimum segment
+# duration" but never defines it; this is that floor, in minutes.
+tracking.eta.min-segment-minutes=1
+
+# LLD 13 validation bounds
+tracking.validation.min-speed-kmh=0
+tracking.validation.max-speed-kmh=200
+
+# LLD 9 geofence evaluation
+tracking.geofence.deviation-after=PT3M
+tracking.geofence.default-dwell-minutes=30
+tracking.geofence.cache-ttl=PT60S
+
+# LLD 5.3 tracking session
+tracking.session.inactivity-timeout=PT30M
+
+# LLD 6.2 retention and downsampling
+tracking.retention.raw-days=30
+tracking.retention.aggregate-days=730
+tracking.retention.sweep-interval-ms=${RETENTION_SWEEP_MS:3600000}
+tracking.retention.batch-size=5000
+
+# LLD 14 rate limiting
+tracking.rate-limit.enabled=${RATE_LIMIT_ENABLED:true}
+tracking.rate-limit.device-sustained-interval=PT3S
+tracking.rate-limit.device-burst=5
+tracking.rate-limit.public-reads-per-minute=120
+tracking.rate-limit.geofence-admin-per-minute=30
+tracking.rate-limit.websocket-subscriptions-per-client=20
+
+# LLD 7.1 Kafka topics. Ingestion through Kafka is off by default so the service
+# runs standalone; with it off, POST /ingest processes the report in-process
+# through the same idempotent path the consumer uses.
+tracking.events.enabled=${KAFKA_ENABLED:false}
+tracking.events.position-raw-topic=tracking.position.raw
+tracking.events.geofence-event-topic=tracking.geofence.event
+tracking.events.connectivity-topic=tracking.device.connectivity
+tracking.events.schedule-updated-topic=schedule.updated
+tracking.events.schema-version=1.0
+
+# LLD 11 / 17: public read access for live tracking. Module 2 has no per-schedule
+# "shareable" flag yet, so this is a service-wide switch until it does.
+tracking.security.public-position-read=${PUBLIC_POSITION_READ:true}
+
+# This service's own credential, exchanged at user-service
+# POST /internal/oauth/token for a short-lived JWT that ServiceTokenProvider
+# refreshes automatically - the same client-credentials flow notification-service
+# and discount-loyalty-service use. Two things must match on the user-service
+# side, or the exchange fails:
+#   security.client.approved-ids                             contains tracking-service
+#   security.service-clients.clients.tracking-service.secret same value as below
+tracking.user-service.url=${USER_SERVICE_URL:http://localhost:8081}
+tracking.user-service.client-id=${USER_SERVICE_CLIENT_ID:tracking-service}
+tracking.user-service.service-secret=${SERVICE_CLIENT_TRACKING_SECRET:CHANGE_ME_TRACKING_SERVICE_SECRET}
+tracking.user-service.connect-timeout=PT2S
+tracking.user-service.read-timeout=PT3S
+
+# LLD 10 step 1: cached read of the Fleet service. Fleet guards
+# GET /api/v1/schedules/{id} with hasAnyRole(OPERATOR, ADMIN), so the token above
+# carries the OPERATOR role from user-service's service-client config.
+# tracking.fleet.service-token below is only a fallback for an environment with no
+# per-service secret yet; with neither set the Fleet read stays off and the route
+# id comes from schedule.updated events alone.
+tracking.fleet.base-url=${FLEET_SERVICE_URL:http://localhost:8082}
+tracking.fleet.service-token=${FLEET_SERVICE_TOKEN:}
+tracking.fleet.client-id=${FLEET_CLIENT_ID:tracking-service}
+tracking.fleet.cache-ttl=PT15M
+tracking.fleet.connect-timeout=PT2S
+tracking.fleet.read-timeout=PT3S
+
+tracking.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:}
+
+eureka.client.enabled=${EUREKA_ENABLED:true}
+eureka.client.service-url.defaultZone=${EUREKA_URL:http://localhost:8761/eureka/}
+eureka.client.register-with-eureka=true
+eureka.client.fetch-registry=true
+eureka.instance.prefer-ip-address=true
+eureka.instance.instance-id=${spring.application.name}:${server.port}
+
+spring.config.import=optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}

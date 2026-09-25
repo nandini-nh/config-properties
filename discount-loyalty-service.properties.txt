@@ -1,0 +1,233 @@
+# =========================================================
+# APPLICATION CONFIGURATION
+# =========================================================
+
+spring.application.name=discount-loyalty-service
+
+spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}
+
+
+# =========================================================
+# DATABASE CONFIGURATION
+# =========================================================
+
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/discount_loyalty_core?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+
+spring.datasource.username=${DB_USERNAME:root}
+
+spring.datasource.password=${DB_PASSWORD:R@kesh2468}
+
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=validate
+
+spring.jpa.open-in-view=false
+
+spring.jpa.properties.hibernate.jdbc.time_zone=UTC
+
+
+# =========================================================
+# FLYWAY CONFIGURATION
+# =========================================================
+
+spring.flyway.enabled=true
+
+spring.flyway.locations=classpath:db/migration
+
+
+# =========================================================
+# KAFKA CONFIGURATION
+# =========================================================
+
+spring.kafka.bootstrap-servers=${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+spring.kafka.producer.acks=all
+
+spring.kafka.producer.properties.enable.idempotence=true
+
+discount.outbox.publish-interval-ms=${DISCOUNT_OUTBOX_PUBLISH_INTERVAL_MS:5000}
+
+
+# =========================================================
+# REDIS CONFIGURATION
+# =========================================================
+
+spring.data.redis.host=${REDIS_HOST:localhost}
+
+spring.data.redis.port=${REDIS_PORT:6379}
+
+spring.data.redis.timeout=2000ms
+
+
+# =========================================================
+# USER SERVICE CONFIGURATION
+# =========================================================
+
+user-service.url=${USER_SERVICE_URL:http://localhost:8081}
+
+user-service.client-id=${USER_SERVICE_CLIENT_ID:discount-loyalty-service}
+
+user-service.service-secret=${SERVICE_CLIENT_DISCOUNT_LOYALTY_SECRET:CHANGE_ME_DISCOUNT_LOYALTY_SERVICE_SECRET}
+
+# Legacy static token, kept only as a fallback.
+# Once service-secret is configured, this is unused.
+user-service.service-token=${USER_SERVICE_SERVICE_TOKEN:}
+
+
+# =========================================================
+# SERVER CONFIGURATION
+# =========================================================
+
+server.port=${SERVER_PORT:8085}
+
+server.shutdown=graceful
+
+
+# =========================================================
+# EUREKA CLIENT CONFIGURATION
+# =========================================================
+
+# Enable Eureka Client
+eureka.client.enabled=${EUREKA_ENABLED:true}
+
+# Eureka Server URL
+eureka.client.service-url.defaultZone=${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+
+# Register this service with Eureka
+eureka.client.register-with-eureka=${EUREKA_REGISTER:true}
+
+# Fetch service registry from Eureka
+eureka.client.fetch-registry=${EUREKA_FETCH_REGISTRY:true}
+
+# Fetch registry every 30 seconds
+eureka.client.registry-fetch-interval-seconds=30
+
+# Initial instance information replication
+eureka.client.initial-instance-info-replication-interval-seconds=40
+
+
+# =========================================================
+# EUREKA INSTANCE CONFIGURATION
+# =========================================================
+
+# Hostname registered in Eureka
+eureka.instance.hostname=${EUREKA_INSTANCE_HOSTNAME:localhost}
+
+# Prefer IP address instead of hostname
+eureka.instance.prefer-ip-address=true
+
+# Unique Eureka instance ID
+eureka.instance.instance-id=${spring.application.name}:${server.port}
+
+# Application name in Eureka
+eureka.instance.appname=${spring.application.name}
+
+# Health check endpoint
+eureka.instance.health-check-url-path=/actuator/health
+
+# Application information endpoint
+eureka.instance.status-page-url-path=/actuator/info
+
+
+# =========================================================
+# EUREKA HEARTBEAT / LEASE CONFIGURATION
+# =========================================================
+
+# Send heartbeat every 10 seconds
+eureka.instance.lease-renewal-interval-in-seconds=10
+
+# Eureka expires instance if heartbeat is not received
+# within 30 seconds
+eureka.instance.lease-expiration-duration-in-seconds=30
+
+
+# =========================================================
+# JWT / SECURITY CONFIGURATION
+# =========================================================
+
+# Spring Security OAuth2 issuer configuration
+# spring.security.oauth2.resourceserver.jwt.issuer-uri=${JWT_ISSUER_URI:http://localhost:8081}
+
+# User Service JWKS endpoint
+security.jwt.jwk-set-uri=${USER_SERVICE_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+
+# JWT issuer
+security.jwt.issuer=${JWT_ISSUER:GB-user-service}
+
+# JWT audience
+security.jwt.audience=${JWT_AUDIENCE:greatbus-api}
+
+
+# =========================================================
+# MANAGEMENT / ACTUATOR CONFIGURATION
+# =========================================================
+
+management.endpoints.web.exposure.include=health,info,metrics
+
+management.endpoint.health.probes.enabled=true
+
+
+# =========================================================
+# LOGGING CONFIGURATION
+# =========================================================
+
+logging.level.root=INFO
+
+logging.level.discount_loyalty_service=${LOG_LEVEL_APP:INFO}
+
+logging.level.org.springframework.security=${LOG_LEVEL_SECURITY:INFO}
+
+logging.level.org.springframework.security.oauth2.server.resource=${LOG_LEVEL_SECURITY:INFO}
+
+logging.level.org.springframework.security.oauth2.jwt=${LOG_LEVEL_SECURITY:INFO}
+
+
+# =========================================================
+# LOYALTY TIER CONFIGURATION
+# =========================================================
+
+discount.loyalty.tier.gold-minimum-qualifying-points=${LOYALTY_GOLD_MIN_POINTS:}
+
+discount.loyalty.tier.platinum-minimum-qualifying-points=${LOYALTY_PLATINUM_MIN_POINTS:}
+
+
+# =========================================================
+# DISCOUNT REDEMPTION CONFIGURATION
+# =========================================================
+
+discount.redemption.reservation-ttl-minutes=${DISCOUNT_RESERVATION_TTL_MINUTES:15}
+
+discount.redemption.expiry-check-ms=${DISCOUNT_EXPIRY_CHECK_MS:60000}
+
+
+# =========================================================
+# DISCOUNT RATE LIMIT CONFIGURATION
+# =========================================================
+
+discount.rate-limit.enabled=${DISCOUNT_RATE_LIMIT_ENABLED:true}
+
+discount.rate-limit.apply-requests=${DISCOUNT_APPLY_RATE_LIMIT:60}
+
+discount.rate-limit.apply-window-seconds=${DISCOUNT_APPLY_RATE_WINDOW_SECONDS:60}
+
+discount.rate-limit.promo-requests=${DISCOUNT_PROMO_RATE_LIMIT:30}
+
+discount.rate-limit.promo-window-seconds=${DISCOUNT_PROMO_RATE_WINDOW_SECONDS:60}
+
+
+# =========================================================
+# RECONCILIATION CONFIGURATION
+# =========================================================
+
+discount.reconciliation.interval-ms=${DISCOUNT_RECONCILIATION_INTERVAL_MS:300000}
+
+
+# =========================================================
+# PROMO EXPIRY CONFIGURATION
+# =========================================================
+
+discount.promo.expiry-check-ms=${DISCOUNT_PROMO_EXPIRY_CHECK_MS:60000}

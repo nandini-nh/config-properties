@@ -1,0 +1,136 @@
+spring.application.name=notification-service
+
+spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}
+
+# =====================================================================
+# ACTUATOR
+# =====================================================================
+management.endpoints.web.exposure.include=health,info
+management.endpoint.health.show-details=when-authorized
+
+# =====================================================================
+# LOGGING (console pattern with correlationId - matches CorrelationIdFilter)
+# =====================================================================
+logging.level.org.springframework=INFO
+logging.pattern.console=%d{HH:mm:ss.SSS} [%X{correlationId}] %-5level %logger{36} - %msg%n
+
+# =====================================================================
+# KAFKA - serializers (common) + this service's own consumer group/trusted packages
+# =====================================================================
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.listener.auto-startup=true
+spring.kafka.consumer.group-id=notification-group
+spring.kafka.consumer.properties.spring.json.trusted.packages=com.enterprise.notification.messaging,com.enterprise.notification.entity
+
+# =====================================================================
+# JPA / FLYWAY
+# =====================================================================
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+spring.flyway.baseline-on-migrate=true
+
+# =====================================================================
+# WEBHOOK (secret used to verify inbound provider callbacks)
+# =====================================================================
+webhook.provider-secret=${WEBHOOK_PROVIDER_SECRET}
+
+# =====================================================================
+# PROVIDER ROUTING (with failover)
+# =====================================================================
+notification.provider.email[0]=emailProvider
+notification.provider.sms[0]=smsProvider
+notification.provider.sms[1]=smsBackupProvider
+notification.provider.push[0]=pushProvider
+notification.provider.whatsapp[0]=whatsappProvider
+notification.provider.whatsapp[1]=whatsappBackupProvider
+
+# =====================================================================
+# SMTP / EMAIL
+# =====================================================================
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_PASSWORD}
+
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.ssl.protocols=TLSv1.2
+
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=5000
+spring.mail.properties.mail.smtp.writetimeout=5000
+
+# =====================================================================
+# TWILIO (SMS / WhatsApp)
+# =====================================================================
+twilio.account-sid=${TWILIO_ACCOUNT_SID}
+twilio.auth-token=${TWILIO_AUTH_TOKEN}
+twilio.phone-number=${TWILIO_PHONE_NUMBER:}
+
+twilio.whatsapp.from-number=${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+twilio.whatsapp.sandbox-content-sid=${TWILIO_WHATSAPP_SANDBOX_SID}
+
+# =====================================================================
+# FIREBASE (PUSH)
+# =====================================================================
+firebase.service-account.path=classpath:firebase-service-account.json
+firebase.enabled=${FIREBASE_ENABLED:true}
+
+# =====================================================================
+# SECURITY (JWT) - RS256 + JWKS
+# =====================================================================
+jwt.jwks-uri=${JWT_JWKS_URI}
+jwt.issuer=${JWT_ISSUER:GB-user-service}
+jwt.audiences=${JWT_AUDIENCES:notification-service,greatbus-api}
+
+# --- PROMO_ACTIVATED bulk fan-out (see PromoActivatedConsumer) ---
+# Same user-service base URL discount-loyalty-service already points at
+# for its own (single-user) Feign client - this service's client just
+# calls a paginated variant of the same /api/v1/admin/users endpoint.
+user-service.url=${USER_SERVICE_URL:http://localhost:8081}
+# Item 4 (proper fix): this service's secret for user-service's
+# POST /internal/oauth/token, matching user-service's
+# security.service-clients.clients.notification-service.secret. When set,
+# ServiceTokenProvider exchanges it for a short-lived JWT and refreshes it
+# automatically - user-service.service-token below is then ignored.
+user-service.service-secret=${SERVICE_CLIENT_NOTIFICATION_SECRET:CHANGE_ME_NOTIFICATION_SERVICE_SECRET}
+# Legacy static service-to-service credential sent as "Authorization: Bearer
+# <token>" on every call UserServiceFeignClient makes (see
+# UserServiceFeignConfig). Kept only as a fallback for as long as
+# user-service.service-secret above is not set; left blank only for
+# local/dev convenience, in which case a warning is logged and the call
+# goes out unauthenticated.
+user-service.service-token=${USER_SERVICE_SERVICE_TOKEN:}
+# Sent as X-Client-ID on the same calls. user-service's ClientIdValidationFilter
+# runs BEFORE its JWT filter and rejects /api/v1/admin/** without an approved
+# client id with 400 USR-400-001, so the Authorization header alone was never
+# enough. This value must also appear in user-service's
+# security.client.approved-ids list.
+user-service.client-id=${USER_SERVICE_CLIENT_ID:notification-service}
+# Users resolved/notified per page of the eligible-user pagination. Keeps
+# each page bounded and restartable instead of loading the whole 50,000+
+# audience into memory or one Kafka message at once.
+notification.bulk.batch-size=${NOTIFICATION_BULK_BATCH_SIZE:1000}
+# Safety cap on pages processed per campaign poll, purely to bound a
+# runaway loop if user-service ever returns "last=false" forever; not
+# expected to be hit in normal operation.
+notification.bulk.max-pages-per-campaign=${NOTIFICATION_BULK_MAX_PAGES_PER_CAMPAIGN:1000}
+# How long a campaign can sit in IN_PROGRESS with no update before
+# PromoCampaignRecoveryScheduler treats it as stalled (e.g. paused after
+# hitting max-pages-per-campaign, or abandoned after a crash) and resumes
+# it from lastProcessedPage + 1.
+notification.bulk.stale-campaign-threshold-minutes=${NOTIFICATION_BULK_STALE_CAMPAIGN_THRESHOLD_MINUTES:15}
+# How often PromoCampaignRecoveryScheduler polls for stalled campaigns.
+notification.bulk.recovery-poll-interval-ms=${NOTIFICATION_BULK_RECOVERY_POLL_INTERVAL_MS:60000}
+# Geofence alerts go to the operator; set this to also copy a platform address.
+notification.alerts.platform-email=${NOTIFICATION_PLATFORM_ALERT_EMAIL:}
+notification.alerts.geofence-topic=${NOTIFICATION_GEOFENCE_TOPIC:tracking.geofence.event}

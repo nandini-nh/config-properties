@@ -1,0 +1,224 @@
+spring.application.name=user-service
+
+spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}
+
+#spring.profiles.active=dev
+
+# Config Server - optional, so the service still starts when it is not running.
+# Standalone local testing: run with CONFIG_ENABLED=false
+spring.cloud.config.enabled=${CONFIG_ENABLED:true}
+spring.config.import=${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+
+# Server
+server.port=8081
+server.shutdown=graceful
+server.forward-headers-strategy=framework
+
+# Logging
+logging.file.name=logs/user-service.log
+
+# =========================================================
+# Eureka - on by default so the gateway can route to this service.
+# Standalone local testing: run with EUREKA_ENABLED=false
+# =========================================================
+eureka.client.enabled=${EUREKA_ENABLED:true}
+eureka.client.service-url.defaultZone=${EUREKA_URL:http://localhost:8761/eureka/}
+eureka.client.register-with-eureka=true
+eureka.client.fetch-registry=true
+eureka.instance.prefer-ip-address=true
+eureka.instance.instance-id=${spring.application.name}:${server.port}
+
+spring.jackson.time-zone=Asia/Kolkata
+
+# JPA
+spring.jpa.open-in-view=false
+
+# Flyway
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+spring.flyway.baseline-on-migrate=false
+spring.flyway.validate-on-migrate=true
+
+# Jackson
+spring.jackson.serialization.write-dates-as-timestamps=false
+
+# SpringDoc / Swagger
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+
+# Actuator
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.show-details=never
+management.endpoint.prometheus.enabled=true
+management.metrics.tags.application=user-service
+
+# Error Handling
+server.error.include-message=never
+server.error.include-binding-errors=never
+server.error.include-stacktrace=never
+
+# Compression
+server.compression.enabled=true
+server.compression.mime-types=text/html,text/xml,text/plain,text/css,application/json
+server.compression.min-response-size=2KB
+
+# Character Encoding
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.enabled=true
+server.servlet.encoding.force=true
+
+# Graceful Shutdown
+spring.lifecycle.timeout-per-shutdown-phase=30s
+
+# CORS
+cors.allowed-origins=http://localhost:3000,http://localhost:5173
+cors.allowed-methods=GET,POST,PUT,PATCH,DELETE,OPTIONS
+cors.allowed-headers=*
+cors.allow-credentials=true
+
+# Retry
+resilience4j.retry.instances.redisRetry.max-attempts=3
+resilience4j.retry.instances.redisRetry.wait-duration=500ms
+
+# Circuit Breaker
+resilience4j.circuitbreaker.instances.redisCircuitBreaker.sliding-window-size=10
+resilience4j.circuitbreaker.instances.redisCircuitBreaker.failure-rate-threshold=50
+resilience4j.circuitbreaker.instances.redisCircuitBreaker.wait-duration-in-open-state=30s
+
+management.tracing.enabled=true
+management.tracing.sampling.probability=1.0
+management.otlp.tracing.endpoint=http://localhost:4318/v1/traces
+
+management.metrics.distribution.percentiles-histogram.http.server.requests=true
+
+# Client Security
+security.client.approved-ids=api-gateway,user-service,notification-service,discount-loyalty-service,booking-service,tracking-service
+
+# modif to true this before production
+app.rate-limit.enabled=true
+
+# Redis Configuration
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# Kafka Configuration
+spring.kafka.bootstrap-servers=localhost:9092
+spring.kafka.consumer.group-id=user-service
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+# Producer config, required to publish account.deletion.requested (self-delete
+# orchestration). No producer was previously configured in this service - only
+# consumers existed.
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+# Account-deletion outbox relay (durable, retryable publication of
+# account.deletion.requested - see AccountDeletionOutboxRelay).
+account-deletion.outbox.relay.fixed-delay-ms=5000
+account-deletion.outbox.relay.batch-size=50
+account-deletion.outbox.relay.publish-timeout-seconds=5
+
+# =========================================================
+# JWT
+# =========================================================
+jwt.key-id=${JWT_KEY_ID:gb-user-key-001}
+jwt.private-key=${JWT_PRIVATE_KEY:classpath:keys/private.pem}
+jwt.public-key=${JWT_PUBLIC_KEY:classpath:keys/public.pem}
+jwt.issuer=${JWT_ISSUER:GB-user-service}
+jwt.audience=${JWT_AUDIENCE:greatbus-api}
+jwt.access-token.expiration-seconds=${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:900}
+jwt.refresh-token.expiration-days=${JWT_REFRESH_TOKEN_EXPIRATION_DAYS:30}
+jwt.refresh-token.absolute-max-days=${JWT_REFRESH_TOKEN_ABSOLUTE_MAX_DAYS:90}
+
+# =========================================================
+# Admin user listing (GET /api/v1/admin/users pagination)
+# =========================================================
+app.admin.users.default-page-size=1000
+app.admin.users.max-page-size=5000
+
+# =========================================================
+# Service Clients - POST /internal/oauth/token (item 4)
+# =========================================================
+security.service-clients.clients.notification-service.secret=${SERVICE_CLIENT_NOTIFICATION_SECRET:CHANGE_ME_NOTIFICATION_SERVICE_SECRET}
+security.service-clients.clients.notification-service.authorities=SERVICE_USER_READ
+security.service-clients.clients.discount-loyalty-service.secret=${SERVICE_CLIENT_DISCOUNT_LOYALTY_SECRET:CHANGE_ME_DISCOUNT_LOYALTY_SERVICE_SECRET}
+security.service-clients.clients.discount-loyalty-service.authorities=SERVICE_USER_READ
+security.service-clients.clients.booking-service.secret=${SERVICE_CLIENT_BOOKING_SECRET:CHANGE_ME_BOOKING_SERVICE_SECRET}
+security.service-clients.clients.booking-service.authorities=SERVICE_USER_READ,SERVICE_FLEET_READ,SERVICE_PAYMENT_READ
+security.service-clients.clients.tracking-service.secret=${SERVICE_CLIENT_TRACKING_SECRET:CHANGE_ME_TRACKING_SERVICE_SECRET}
+security.service-clients.clients.tracking-service.authorities=SERVICE_FLEET_READ
+
+# =========================================================
+# Mail
+# =========================================================
+
+#spring.mail.host=smtp.gmail.com
+#spring.mail.port=587
+#spring.mail.username=YOUR_GMAIL
+#spring.mail.password=YOUR_APP_PASSWORD
+#spring.mail.properties.mail.smtp.auth=true
+#spring.mail.properties.mail.smtp.starttls.enable=true
+#app.mail.from=YOUR_GMAIL
+#app.frontend.url=http://localhost:3000
+
+# ==========================================
+# LOCAL TESTING ONLY
+# ==========================================
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=jaddurakesh7@gmail.com
+spring.mail.password=qndkhdoiuwqilruc
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+app.mail.from=jaddurakesh7@gmail.com
+app.frontend.url=http://localhost:3000
+
+# =========================================================
+# Google Sign-In (Continue with Google)
+# Only the CLIENT ID is needed - the client secret is NOT used for ID token
+# verification. Override with the GOOGLE_CLIENT_ID env var if you rotate it.
+# =========================================================
+google.client-id=${GOOGLE_CLIENT_ID:976774472403-alng2t068jr3g7lv4a0aeqnn3as6tb88.apps.googleusercontent.com}
+
+# =========================================================
+# Bootstrap admin user (AdminBootstrap creates it on first start).
+# These used to sit in bootstrap.properties, which Spring Boot 3 never reads
+# because spring-cloud-starter-bootstrap is not on the classpath - so the
+# values were always null and AdminBootstrap would fail on startup.
+# =========================================================
+admin.credentials.username=${ADMIN_USERNAME:admin@gmail.com}
+admin.credentials.password=${ADMIN_PASSWORD:Admin@123}
+admin.credentials.role=${ADMIN_ROLE:ADMIN}
+# =====================================================================
+# OBJECT STORAGE (profile photos)
+# The photo is kept in S3, never on the machine that served the upload, so
+# every instance can hand out a link for it. Point endpoint/path-style at a
+# local MinIO for development; leave them empty for real AWS. Credentials come
+# from the standard AWS chain (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY or an
+# instance role) - no keys belong in this file.
+# =====================================================================
+storage.s3.bucket=${STORAGE_S3_BUCKET:}
+storage.s3.profile-photo-prefix=${STORAGE_S3_PROFILE_PHOTO_PREFIX:profile-photos}
+storage.s3.region=${AWS_REGION:ap-south-1}
+storage.s3.endpoint=${STORAGE_S3_ENDPOINT:}
+storage.s3.path-style-access=${STORAGE_S3_PATH_STYLE:false}
+storage.s3.kms-key-id=${STORAGE_S3_KMS_KEY_ID:}
+storage.s3.presigned-url-minutes=${STORAGE_S3_PRESIGNED_URL_MINUTES:15}
+storage.s3.max-photo-bytes=${STORAGE_S3_MAX_PHOTO_BYTES:5242880}
+
+# Multipart limits for the photo upload endpoint; slightly above the photo
+# limit above so the service answers with its own clear message.
+spring.servlet.multipart.max-file-size=${MULTIPART_MAX_FILE_SIZE:6MB}
+spring.servlet.multipart.max-request-size=${MULTIPART_MAX_REQUEST_SIZE:6MB}
+
+# =====================================================================
+# TWO-STEP VERIFICATION
+# Codes are delivered by notification-service through its existing dispatch
+# API (templates live in that service's own migration).
+# =====================================================================
+notification-service.url=${NOTIFICATION_SERVICE_URL:http://localhost:8087}
+two-factor.code-expiry-minutes=${TWO_FACTOR_CODE_EXPIRY_MINUTES:5}
+two-factor.max-codes-per-hour=${TWO_FACTOR_MAX_CODES_PER_HOUR:10}
+two-factor.delivery.enabled=${TWO_FACTOR_DELIVERY_ENABLED:true}
